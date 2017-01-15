@@ -3,4 +3,14 @@
 	<category name="MBRCheck.c" />
 	<category name="X-Tension.h" />
 	<category name="X-Tension.c" />
+	<category name="XMBRSum.c">
+		<category name="Window">
+			<property name="Left" type="integer">-8</property>
+			<property name="Top" type="integer">-31</property>
+			<property name="Right" type="integer">1598</property>
+			<property name="Bottom" type="integer">727</property>
+			<property name="Maximized" type="integer">1</property>
+			<property name="Active" type="integer">1</property>
+		</category>
+	</category>
 </settings>

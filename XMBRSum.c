@@ -12,14 +12,18 @@
 // http://x-ways.com/forensics/x-tensions/api.html
 // for current documentation
 
+#include <stdio.h>
 #include <wchar.h>
 
 #define MAX_MSG_LEN 128
 
 wchar_t* XT_NAME = L"[MBRCheck]";
+wchar_t XT_PATH[MAX_PATH];
+wchar_t* KNOWN_GOODS[];
 
 BOOL APIENTRY DllMain(HINSTANCE hInstDLL, DWORD fdwReason, LPVOID lpvReserved)
 {
+	GetModuleFileNameW(hInstDLL, XT_PATH, MAX_PATH);	
     return TRUE;
 }
 
@@ -38,7 +42,7 @@ LPWSTR lookupMD5(LPWSTR calcd_md5)
 	}
 	else if (wcscmp(calcd_md5, L"8f558eb6672622401da993e1e865c861") == 0)
 	{
-		return L"Windows XPSP2";
+		return L"Windows XPSP2/2003R2";
 	}
 	else if(wcscmp(calcd_md5, L"017e003ab27b155b3a606eb18257fc5d") == 0)
 	{
@@ -56,6 +60,58 @@ LPWSTR lookupMD5(LPWSTR calcd_md5)
 	{
 		return L"UNKNOWN";
 	}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// read_goods
+BOOL read_goods(void)
+{
+	wchar_t *buf = malloc(sizeof(wchar_t)*MAX_MSG_LEN);
+
+	// Get the path to the known goods file
+	wchar_t* file = (wcsrchr(XT_PATH, '\\') + 1);
+	int path_len = wcslen(XT_PATH);
+	int file_len = wcslen(file);
+	int good_path_len = path_len - file_len + 8 + 1; // good.txt + \0
+	wchar_t good_path[good_path_len];
+	wcsncpy(good_path, XT_PATH, path_len - file_len);
+	wcscat(good_path, L"good.txt");
+
+	// Get file handle
+	HANDLE hFile = _wfopen(good_path, L"r");
+	if (hFile == INVALID_HANDLE_VALUE)
+	{
+		swprintf(buf, MAX_MSG_LEN, L"%ls Couldn't open '%ls' for reading!", XT_NAME, good_path);
+		XWF_OutputMessage (buf, 0);
+		return FALSE;
+	}
+
+	LPWSTR md5 = malloc(sizeof(wchar_t) * 33);
+	LPWSTR desc = malloc(sizeof(wchar_t) *  65);
+	wchar_t* line = malloc(sizeof(wchar_t) * 256);
+	int i = 1;
+	int ok = 0;
+	while(fgetws(line, 255, hFile) != NULL)
+	{
+		wchar_t** temp = malloc(sizeof(wchar_t) * 256);
+		md5 = wcstok(line, L"\t", temp);
+		desc = wcstok(NULL, L"\t", temp);		
+
+		if (md5 == NULL || desc == NULL) // OK
+		{
+			swprintf(buf, MAX_MSG_LEN, L"%ls Line %d seems corrupt!", XT_NAME, i);
+			XWF_OutputMessage (buf, 0);
+		}
+		else
+		{
+			// TODO: Store the md5/desc in KNOWN_GOODS
+			ok += 1;
+		}
+		i++;		
+	}
+
+	fclose(hFile);
+	return TRUE;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -80,6 +136,15 @@ LONG __stdcall XT_Prepare(HANDLE hVolume, HANDLE hEvidence, DWORD nOpType, void*
 		XWF_OutputMessage (buf, 0);
 		return 0;
 	}
+
+	//swprintf(buf, MAX_MSG_LEN, L"%ls Reading known good MD5s.", XT_NAME);
+	//XWF_OutputMessage (buf, 0);
+	//BOOL got_goods = read_goods();
+	//if (got_goods)
+	//{
+	//	swprintf(buf, MAX_MSG_LEN, L"%ls Done, read %d known good MD5s.", XT_NAME, 1);
+	//	XWF_OutputMessage (buf, 0);
+	//}
 
 	swprintf(buf, MAX_MSG_LEN, L"%ls Starting", XT_NAME);
 	XWF_OutputMessage (buf, 0);
