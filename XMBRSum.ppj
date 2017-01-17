@@ -8,7 +8,7 @@ POC_PROJECT_TYPE = 11#
 POC_PROJECT_OUTPUTDIR = output#
 POC_PROJECT_RESULTDIR = .#
 POC_PROJECT_ARGUMENTS = #
-POC_PROJECT_WORKPATH = #
+POC_PROJECT_WORKPATH = .#
 POC_PROJECT_EXECUTOR = #
 POC_PROJECT_ZIPEXTRA = #
 CC = pocc.exe#
@@ -19,7 +19,7 @@ SIGN = posign.exe#
 CCFLAGS = -std:C99 -Tx64-coff -Ot -Ob1 -fp:precise -W1 -Gr -Ze#
 ASFLAGS = -AAMD64#
 RCFLAGS = -r#
-LINKFLAGS = -machine:amd64 -subsystem:windows kernel32.lib user32.lib gdi32.lib comctl32.lib comdlg32.lib advapi32.lib delayimp64.lib -dll#
+LINKFLAGS = -machine:x64 -subsystem:windows kernel32.lib user32.lib gdi32.lib comctl32.lib comdlg32.lib advapi32.lib delayimp64.lib -dll#
 SIGNFLAGS = -location:CU -store:MY -timeurl:http://timestamp.verisign.com/scripts/timstamp.dll -errkill#
 INCLUDE = $(PellesCDir)\Include\Win;$(PellesCDir)\Include#
 LIB = $(PellesCDir)\Lib\Win64;$(PellesCDir)\Lib#
@@ -48,6 +48,6 @@ output\X-Tension.obj: \
 	X-Tension.h
 	$(CC) $(CCFLAGS) "$!" -Fo"$@"
 
-.EXCLUDEDFILES:
-
 .SILENT:
+
+.EXCLUDEDFILES:

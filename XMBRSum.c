@@ -17,56 +17,45 @@
 
 #define MAX_MSG_LEN 128
 
-wchar_t* XT_NAME = L"[MBRCheck]";
+typedef struct good
+{
+	wchar_t md5[33];	// 32 + \0
+	wchar_t desc[65];	// 64 + \0
+	struct good *next;	// Next item in linked list
+} good;
+
+static wchar_t *XT_NAME = L"[XMBRSum]"; // Prefix for messages
 wchar_t XT_PATH[MAX_PATH];
-wchar_t* KNOWN_GOODS[];
+static good *the_goods = NULL; // Linked list
 
 BOOL APIENTRY DllMain(HINSTANCE hInstDLL, DWORD fdwReason, LPVOID lpvReserved)
 {
-	GetModuleFileNameW(hInstDLL, XT_PATH, MAX_PATH);	
+	GetModuleFileNameW(hInstDLL, XT_PATH, MAX_PATH); // Save the path of the DLL
     return TRUE;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 // MD5 Lookup
-
 LPWSTR lookupMD5(LPWSTR calcd_md5)
 {
-	if (wcscmp(calcd_md5, L"5fb38429d5d77768867c76dcbdb35194") == 0)
+	good *temp = the_goods;
+	while(temp)
 	{
-		return L"NULL_BYTES";
+		if (wcscmp(calcd_md5, temp->md5) == 0)
+		{
+			return temp->desc;
+		}
+		temp = temp->next;
 	}
-	else if (wcscmp(calcd_md5, L"a36c5e4f47e84449ff07ed3517b43a31") == 0)
-	{
-		return L"Windows 7/8.1/10/2012R2";
-	}
-	else if (wcscmp(calcd_md5, L"8f558eb6672622401da993e1e865c861") == 0)
-	{
-		return L"Windows XPSP2/2003R2";
-	}
-	else if(wcscmp(calcd_md5, L"017e003ab27b155b3a606eb18257fc5d") == 0)
-	{
-		return L"Linux Mint 17/18, SIFT3";
-	}
-	else if(wcscmp(calcd_md5, L"e93d266998c64f903d6e2758ca2f8efb") == 0)
-	{
-		return L"Kali Linux 1.1.0c";
-	}
-	else if(wcscmp(calcd_md5, L"b7310d12ff8857d5b67eaa63423edb33") == 0)
-	{
-		return L"TrueCrypt";
-	}
-	else
-	{
-		return L"UNKNOWN";
-	}
+
+	return L"UNKNOWN";
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// read_goods
-BOOL read_goods(void)
+// Read the known good MD5 and their descriptions from a text file
+int read_goods(void)
 {
-	wchar_t *buf = malloc(sizeof(wchar_t)*MAX_MSG_LEN);
+	wchar_t buf[MAX_MSG_LEN];
 
 	// Get the path to the known goods file
 	wchar_t* file = (wcsrchr(XT_PATH, '\\') + 1);
@@ -74,44 +63,53 @@ BOOL read_goods(void)
 	int file_len = wcslen(file);
 	int good_path_len = path_len - file_len + 8 + 1; // good.txt + \0
 	wchar_t good_path[good_path_len];
-	wcsncpy(good_path, XT_PATH, path_len - file_len);
-	wcscat(good_path, L"good.txt");
+	memcpy(good_path, XT_PATH, sizeof(wchar_t) * (path_len - file_len));	
+	memcpy(good_path + path_len - file_len, L"good.txt", sizeof(wchar_t) * 9);
 
 	// Get file handle
-	HANDLE hFile = _wfopen(good_path, L"r");
-	if (hFile == INVALID_HANDLE_VALUE)
+	FILE* hFile = _wfopen(good_path, L"r");
+	if (!hFile)
 	{
 		swprintf(buf, MAX_MSG_LEN, L"%ls Couldn't open '%ls' for reading!", XT_NAME, good_path);
 		XWF_OutputMessage (buf, 0);
-		return FALSE;
+		return -1;
 	}
 
-	LPWSTR md5 = malloc(sizeof(wchar_t) * 33);
-	LPWSTR desc = malloc(sizeof(wchar_t) *  65);
-	wchar_t* line = malloc(sizeof(wchar_t) * 256);
-	int i = 1;
-	int ok = 0;
-	while(fgetws(line, 255, hFile) != NULL)
+	size_t line_length = sizeof(wchar_t) * 128;
+	wchar_t *buffer = (wchar_t*)malloc(line_length);
+
+	int count = 0;
+	while(fgetws(buffer, line_length, hFile))
 	{
-		wchar_t** temp = malloc(sizeof(wchar_t) * 256);
-		md5 = wcstok(line, L"\t", temp);
-		desc = wcstok(NULL, L"\t", temp);		
+		count++;
 
-		if (md5 == NULL || desc == NULL) // OK
+		if (buffer[32] != '\t')
 		{
-			swprintf(buf, MAX_MSG_LEN, L"%ls Line %d seems corrupt!", XT_NAME, i);
-			XWF_OutputMessage (buf, 0);
+			swprintf(buf, MAX_MSG_LEN, L"%ls ERROR: Unexpected char at pos 32 on line %d. Line ignored. (Should be \\t)", XT_NAME, count);
+			XWF_OutputMessage(buf, 0);
+			continue;
 		}
-		else
+
+		if (buffer[wcslen(buffer)-1] != '\n')
 		{
-			// TODO: Store the md5/desc in KNOWN_GOODS
-			ok += 1;
+			swprintf(buf, MAX_MSG_LEN, L"%ls WARNING: Line %d has been truncated.", XT_NAME, count);
+			XWF_OutputMessage(buf, 0);
 		}
-		i++;		
+		
+		good *g = (good *)malloc(sizeof(good));
+		memcpy(g->md5, buffer, 32 * sizeof(wchar_t));
+		g->md5[32] = '\0';
+		memcpy(g->desc, buffer + 33, (wcslen(buffer) * sizeof(wchar_t)) - (33 * sizeof(wchar_t)));
+
+		g->next = the_goods;
+
+		the_goods = g;		
 	}
 
+	free(buffer);
 	fclose(hFile);
-	return TRUE;
+	
+	return count;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -128,7 +126,7 @@ LONG __stdcall XT_Init(CallerInfo info, DWORD nFlags, HANDLE hMainWnd, void* lpR
 
 LONG __stdcall XT_Prepare(HANDLE hVolume, HANDLE hEvidence, DWORD nOpType, void* lpReserved)
 {
-	wchar_t *buf = malloc(sizeof(wchar_t)*MAX_MSG_LEN);
+	wchar_t buf[MAX_MSG_LEN];
 
 	if (XT_ACTION_RUN != nOpType)
 	{
@@ -137,14 +135,14 @@ LONG __stdcall XT_Prepare(HANDLE hVolume, HANDLE hEvidence, DWORD nOpType, void*
 		return 0;
 	}
 
-	//swprintf(buf, MAX_MSG_LEN, L"%ls Reading known good MD5s.", XT_NAME);
-	//XWF_OutputMessage (buf, 0);
-	//BOOL got_goods = read_goods();
-	//if (got_goods)
-	//{
-	//	swprintf(buf, MAX_MSG_LEN, L"%ls Done, read %d known good MD5s.", XT_NAME, 1);
-	//	XWF_OutputMessage (buf, 0);
-	//}
+	swprintf(buf, MAX_MSG_LEN, L"%ls Reading known good MD5s.", XT_NAME);
+	XWF_OutputMessage (buf, 0);
+	int goods = read_goods();
+	if (goods >= 0)
+	{
+		swprintf(buf, MAX_MSG_LEN, L"%ls Done, read %d known good MD5s.", XT_NAME, goods);
+		XWF_OutputMessage (buf, 0);
+	}
 
 	swprintf(buf, MAX_MSG_LEN, L"%ls Starting", XT_NAME);
 	XWF_OutputMessage (buf, 0);
@@ -260,28 +258,16 @@ LONG __stdcall XT_Prepare(HANDLE hVolume, HANDLE hEvidence, DWORD nOpType, void*
 		hEvObj = XWF_GetNextEvObj(hEvObj, NULL);
 	}
 
+	// free the linked-list
+	while(the_goods)
+	{
+		good *temp = the_goods->next;
+		free(the_goods);
+		the_goods = temp;
+	}
+
 	swprintf(buf, MAX_MSG_LEN, L"%ls Done", XT_NAME);
 	XWF_OutputMessage (buf, 0);
 
 	return 1;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// XT_Done
-
-LONG __stdcall XT_Done(void* lpReserved)
-{
-	wchar_t *buf = malloc(sizeof(wchar_t)*MAX_MSG_LEN);
-	swprintf(buf, MAX_MSG_LEN, L"%ls Done", XT_NAME);
-	XWF_OutputMessage (buf, 0);
-	return 0;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// XT_About
-
-LONG __stdcall XT_About(HANDLE hParentWnd, void* lpReserved)
-{
-	// XWF_OutputMessage (L"XT_New about", 0);
-	return 0;
 }
