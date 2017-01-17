@@ -21,16 +21,16 @@ typedef struct good
 {
 	wchar_t md5[33];	// 32 + \0
 	wchar_t desc[65];	// 64 + \0
-	struct good *next;
+	struct good *next;	// Next item in linked list
 } good;
 
-static wchar_t *XT_NAME = L"[MBRCheck]";
+static wchar_t *XT_NAME = L"[XMBRSum]"; // Prefix for messages
 wchar_t XT_PATH[MAX_PATH];
-static good *the_goods = NULL;
+static good *the_goods = NULL; // Linked list
 
 BOOL APIENTRY DllMain(HINSTANCE hInstDLL, DWORD fdwReason, LPVOID lpvReserved)
 {
-	GetModuleFileNameW(hInstDLL, XT_PATH, MAX_PATH);	
+	GetModuleFileNameW(hInstDLL, XT_PATH, MAX_PATH); // Save the path of the DLL
     return TRUE;
 }
 
@@ -52,7 +52,7 @@ LPWSTR lookupMD5(LPWSTR calcd_md5)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// read_goods
+// Read the known good MD5 and their descriptions from a text file
 int read_goods(void)
 {
 	wchar_t buf[MAX_MSG_LEN];
@@ -78,25 +78,32 @@ int read_goods(void)
 	size_t line_length = sizeof(wchar_t) * 128;
 	wchar_t *buffer = (wchar_t*)malloc(line_length);
 
-	DWORD count = 0;
+	int count = 0;
 	while(fgetws(buffer, line_length, hFile))
 	{
-		wchar_t *temp;
+		count++;
 
-		wchar_t *md5;
-		md5 = wcstok(buffer, L"\t", &temp);
-		
-		wchar_t *desc;
-		desc = wcstok(NULL, L"\n", &temp);
+		if (buffer[32] != '\t')
+		{
+			swprintf(buf, MAX_MSG_LEN, L"%ls ERROR: Unexpected char at pos 32 on line %d. Line ignored. (Should be \\t)", XT_NAME, count);
+			XWF_OutputMessage(buf, 0);
+			continue;
+		}
+
+		if (buffer[wcslen(buffer)-1] != '\n')
+		{
+			swprintf(buf, MAX_MSG_LEN, L"%ls WARNING: Line %d has been truncated.", XT_NAME, count);
+			XWF_OutputMessage(buf, 0);
+		}
 		
 		good *g = (good *)malloc(sizeof(good));
-		wcsncpy(g->md5, md5, sizeof(g->md5) / sizeof(wchar_t));
-		wcsncpy(g->desc, desc, sizeof(g->desc) / sizeof(wchar_t));
-		
+		memcpy(g->md5, buffer, 32 * sizeof(wchar_t));
+		g->md5[32] = '\0';
+		memcpy(g->desc, buffer + 33, (wcslen(buffer) * sizeof(wchar_t)) - (33 * sizeof(wchar_t)));
+
 		g->next = the_goods;
 
-		the_goods = g;
-		count++;
+		the_goods = g;		
 	}
 
 	free(buffer);
@@ -263,23 +270,4 @@ LONG __stdcall XT_Prepare(HANDLE hVolume, HANDLE hEvidence, DWORD nOpType, void*
 	XWF_OutputMessage (buf, 0);
 
 	return 1;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// XT_Done
-
-LONG __stdcall XT_Done(void* lpReserved)
-{
-	wchar_t *buf = malloc(sizeof(wchar_t)*MAX_MSG_LEN);
-	swprintf(buf, MAX_MSG_LEN, L"%ls Done", XT_NAME);
-	XWF_OutputMessage (buf, 0);
-	return 0;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// XT_About
-
-LONG __stdcall XT_About(HANDLE hParentWnd, void* lpReserved)
-{
-	return 0;
 }
