@@ -64,7 +64,7 @@ int read_goods(void)
 	int good_path_len = path_len - file_len + 8 + 1; // good.txt + \0
 	wchar_t good_path[good_path_len];
 	memcpy(good_path, XT_PATH, sizeof(wchar_t) * (path_len - file_len));	
-	memcpy(good_path + path_len - file_len, L"good.txt", sizeof(wchar_t) * 8);
+	memcpy(good_path + path_len - file_len, L"good.txt", sizeof(wchar_t) * 9);
 
 	// Get file handle
 	FILE* hFile = _wfopen(good_path, L"r");
