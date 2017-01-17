@@ -3,6 +3,13 @@
 	<category name="X-Tension.h" />
 	<category name="X-Tension.c" />
 	<category name="XMBRSum.c">
+		<category name="Foldings">
+			<property name="Line1" type="integer">21</property>
+			<property name="Line2" type="integer">32</property>
+			<property name="Line3" type="integer">40</property>
+			<property name="Line4" type="integer">57</property>
+			<property name="Line5" type="integer">119</property>
+		</category>
 		<category name="Window">
 			<property name="Left" type="integer">-8</property>
 			<property name="Top" type="integer">-31</property>

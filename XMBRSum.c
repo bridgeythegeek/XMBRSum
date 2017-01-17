@@ -171,7 +171,7 @@ LONG __stdcall XT_Prepare(HANDLE hVolume, HANDLE hEvidence, DWORD nOpType, void*
 			continue;
 		}
 		
-		LPVOID lpBuffer = malloc(512);
+		BYTE lpBuffer[512];
 		DWORD iBytesRead = XWF_Read(hDisk, 0, lpBuffer, 512);
 
 		if (512 != iBytesRead)
@@ -182,8 +182,7 @@ LONG __stdcall XT_Prepare(HANDLE hVolume, HANDLE hEvidence, DWORD nOpType, void*
 			continue;
 		}
 		
-		char *bytes = (char *)lpBuffer;
-		if ((*(bytes+510) == (char)0x55) && (*(bytes+511) == (char)0xAA))
+		if ((lpBuffer[510] == 0x55) && (lpBuffer[511] == 0xAA))
 		{
 			swprintf(buf, MAX_MSG_LEN, L"%ls %ls - Signature OK (55AA)",
 				XT_NAME, pEvObjTitle);
@@ -192,7 +191,7 @@ LONG __stdcall XT_Prepare(HANDLE hVolume, HANDLE hEvidence, DWORD nOpType, void*
 		else
 		{
 			swprintf(buf, MAX_MSG_LEN, L"%ls %ls - Unexpected signature: %hhX%hhX!",
-				XT_NAME, pEvObjTitle, *(bytes+510), *(bytes+511));
+				XT_NAME, pEvObjTitle, lpBuffer[510], lpBuffer[511]);
 			XWF_OutputMessage (buf, 0);
 		}
 
