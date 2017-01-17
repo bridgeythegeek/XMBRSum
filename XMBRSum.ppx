@@ -6,9 +6,9 @@
 	<category name="XMBRSum.c">
 		<category name="Window">
 			<property name="Left" type="integer">-8</property>
-			<property name="Top" type="integer">-31</property>
-			<property name="Right" type="integer">1598</property>
-			<property name="Bottom" type="integer">727</property>
+			<property name="Top" type="integer">-30</property>
+			<property name="Right" type="integer">1463</property>
+			<property name="Bottom" type="integer">734</property>
 			<property name="Maximized" type="integer">1</property>
 			<property name="Active" type="integer">1</property>
 		</category>

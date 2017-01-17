@@ -68,7 +68,7 @@ fptr_XWF_SectorIO XWF_SectorIO;
 ///////////////////////////////////////////////////////////////////////////////
 // XT_RetrieveFunctionPointers - call this function before calling anything else
 
-LONG __cdecl XT_RetrieveFunctionPointers()
+LONG __cdecl XT_RetrieveFunctionPointers(void)
 {
 	HMODULE Hdl = GetModuleHandle(NULL);
 
