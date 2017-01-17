@@ -231,11 +231,11 @@ LONG __stdcall XT_Prepare(HANDLE hVolume, HANDLE hEvidence, DWORD nOpType, void*
 			hEvObj = XWF_GetNextEvObj(hEvObj, NULL);
 			continue;
         }
-	    
-	    cbHash = 16;
+		
+		cbHash = 16;
 	    if (CryptGetHashParam(hHash, HP_HASHVAL, rgbHash, &cbHash, 0))
 	    {
-			LPWSTR md5 = malloc(sizeof(char)*32);
+			wchar_t *md5 = malloc(sizeof(wchar_t) * 32);
 			for (DWORD i = 0; i < cbHash; i++)
 	        {
 	            swprintf(md5 + (i*2), 2, L"%c%c", rgbDigits[rgbHash[i] >> 4], rgbDigits[rgbHash[i] & 0xf]);
@@ -243,6 +243,7 @@ LONG __stdcall XT_Prepare(HANDLE hVolume, HANDLE hEvidence, DWORD nOpType, void*
 			
 			swprintf(buf, MAX_MSG_LEN, L"%ls %ls - %ls (%ls)", XT_NAME, pEvObjTitle, md5, lookupMD5(md5));
 	        XWF_OutputMessage(buf, 0);
+			free(md5);
 	    }
 	    else
 	    {
